@@ -86,7 +86,9 @@ const uiStateUpdaters = null;
  */
 const DEFAULT_MAP_CONTROLS_FEATURES = {
   show: true,
-  active: false
+  active: false,
+  // defines which map index users are interacting with (through map controls)
+  activeMapIndex: 0
 };
 
 export const DEFAULT_MAP_CONTROLS = [
@@ -110,6 +112,7 @@ export const DEFAULT_MAP_CONTROLS = [
  * @property {boolean} legend Default: `false`,
  * @property {string} imageDataUri Default: `''`,
  * @property {boolean} exporting Default: `false`
+ * @property {boolean} error Default: `false`
  * @public
  */
 export const DEFAULT_EXPORT_IMAGE = {
@@ -187,6 +190,7 @@ export const DEFAULT_EXPORT_MAP = {
  * @property {Object} exportImage Default: [`DEFAULT_EXPORT_IMAGE`](#default_export_image)
  * @property {Object} exportData Default: [`DEFAULT_EXPORT_DATA`](#default_export_data)
  * @property {Object} mapControls Default: [`DEFAULT_MAP_CONTROLS`](#default_map_controls)
+ * @property {number} activeMapIndex defines which map the user clicked on. Default: 0
  * @public
  */
 export const INITIAL_UI_STATE = {
@@ -283,13 +287,14 @@ export const hideExportDropdownUpdater = state => ({
  * @returns {Object} nextState
  * @public
  */
-export const toggleMapControlUpdater = (state, {payload: panelId}) => ({
+export const toggleMapControlUpdater = (state, {payload: {panelId, index = 0} }) => ({
   ...state,
   mapControls: {
     ...state.mapControls,
     [panelId]: {
       ...state.mapControls[panelId],
-      active: !state.mapControls[panelId].active
+      active: !state.mapControls[panelId].active,
+      activeMapIndex: index
     }
   }
 });
