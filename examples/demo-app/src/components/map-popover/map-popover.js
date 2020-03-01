@@ -18,31 +18,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import {LoadDataModalFactory} from 'kepler.gl/components';
-import LoadDataModal from '../components/load-data-modal/load-data-modal';
-import {withState} from 'kepler.gl/components';
-
+import React, {useState} from 'react';
+import {connect} from 'react-redux';
+import styled from 'styled-components';
 import {
-  loadRemoteMap,
-  loadSample,
-  switchToLoadingMethod,
-  loadEditableDataLayer,
-  loadReadOnlyDataLayer
-} from '../actions';
+  MapPopoverFactory,
+  Icons,
+  IconRoundSmall
+} from 'kepler.gl/components';
 
-export const CustomLoadDataModalFactory = () =>
-  withState(
-    [],
-    state => ({...state.demo}),
-    {
-      onSwitchToLoadingMethod: switchToLoadingMethod,
-      onLoadSample: loadSample,
-      onLoadRemoteMap: loadRemoteMap,
-      onLoadEditableDataLayer: loadEditableDataLayer,
-      onLoadReadOnlyDataLayer: loadReadOnlyDataLayer
-    }
-  )(LoadDataModal);
+import ReactMarkdown from 'react-markdown';
 
-export function replaceLoadDataModal() {
-  return [LoadDataModalFactory, CustomLoadDataModalFactory];
+const MapPopover = MapPopoverFactory();
+
+class CustomMapPopover extends React.Component {
+	render() {
+		return (
+		  <MapPopover {...this.props}/>
+		);
+	}
 }
+const mapStateToProps = state => state;
+const dispatchToProps = dispatch => ({dispatch});
+
+export default connect(
+  mapStateToProps,
+  dispatchToProps
+)(CustomMapPopover);
+
+// export default CustomMapControl;

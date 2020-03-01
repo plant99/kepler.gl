@@ -18,31 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import {LoadDataModalFactory} from 'kepler.gl/components';
-import LoadDataModal from '../components/load-data-modal/load-data-modal';
+import {MapPopoverFactory, MapPopover, LayerHoverInfoFactory, CoordinateInfoFactory} from 'kepler.gl/components';
+import CustomMapPopover from '../components/map-popover/map-popover';
 import {withState} from 'kepler.gl/components';
+import {visStateLens} from 'kepler.gl/reducers';
 
-import {
-  loadRemoteMap,
-  loadSample,
-  switchToLoadingMethod,
-  loadEditableDataLayer,
-  loadReadOnlyDataLayer
-} from '../actions';
-
-export const CustomLoadDataModalFactory = () =>
+export const CustomMapPopoverFactory = () =>
   withState(
-    [],
-    state => ({...state.demo}),
-    {
-      onSwitchToLoadingMethod: switchToLoadingMethod,
-      onLoadSample: loadSample,
-      onLoadRemoteMap: loadRemoteMap,
-      onLoadEditableDataLayer: loadEditableDataLayer,
-      onLoadReadOnlyDataLayer: loadReadOnlyDataLayer
-    }
-  )(LoadDataModal);
+    [visStateLens],
+    state => ({...state})
+  )(CustomMapPopover);
 
-export function replaceLoadDataModal() {
-  return [LoadDataModalFactory, CustomLoadDataModalFactory];
+
+CustomMapPopoverFactory.deps = [LayerHoverInfoFactory, CoordinateInfoFactory];
+
+export function replaceMapPopover() {
+  return [MapPopoverFactory, CustomMapPopoverFactory];
 }

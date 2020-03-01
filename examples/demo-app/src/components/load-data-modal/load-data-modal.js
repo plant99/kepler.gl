@@ -32,15 +32,16 @@ import LoadRemoteMap from './load-remote-map';
 
 const propTypes = {
   // query options
-  loadingMethod: PropTypes.object.isRequired,
-  currentOption: PropTypes.object.isRequired,
-  sampleMaps: PropTypes.arrayOf(PropTypes.object).isRequired,
+  app: PropTypes.object.isRequired,
+  keplerGl: PropTypes.object.isRequired,
 
   // call backs
   onFileUpload: PropTypes.func.isRequired,
   onLoadRemoteMap: PropTypes.func.isRequired,
   onLoadSample: PropTypes.func.isRequired,
-  onSwitchToLoadingMethod: PropTypes.func.isRequired
+  onSwitchToLoadingMethod: PropTypes.func.isRequired,
+  onLoadEditableDataLayer: PropTypes.func.isRequired,
+  onLoadReadOnlyDataLayer: PropTypes.func.isRequired
 };
 
 const ModalTab = styled.div`
@@ -49,17 +50,14 @@ const ModalTab = styled.div`
   border-bottom: 1px solid #d8d8d8;
   margin-bottom: 32px;
   justify-content: space-between;
-
   .load-data-modal__tab__inner {
     display: flex;
   }
-
   .load-data-modal__tab__item.active {
     color: ${props => props.theme.textColorLT};
     border-bottom: 3px solid ${props => props.theme.textColorLT};
     font-weight: 500;
   }
-
   ${media.portable`
     font-size: 12px;
   `};
@@ -73,17 +71,14 @@ const StyledLoadDataModalTabItem = styled.div`
   font-size: 14px;
   font-weight: 400;
   color: ${props => props.theme.subtextColorLT};
-
   ${media.portable`
     margin-left: 16px;
     font-size: 12px;
   `};
-
   :first-child {
     margin-left: 0;
     padding-left: 0;
   }
-
   :hover {
     color: ${props => props.theme.textColorLT};
   }
@@ -96,7 +91,6 @@ const StyledMapIcon = styled.div`
   width: 64px;
   height: 48px;
   border-radius: 2px;
-
   ${media.portable`
     width: 48px;
     height: 32px;
@@ -106,38 +100,31 @@ const StyledMapIcon = styled.div`
 const StyledTrySampleData = styled.div`
   display: flex;
   margin-bottom: 12px;
-
   .demo-map-title {
     margin-left: 16px;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
   }
-
   .demo-map-label {
     font-size: 11px;
     color: ${props => props.theme.labelColorLT};
-
     ${media.portable`
       font-size: 10px;
     `};
   }
-
   .demo-map-action {
     display: flex;
     font-size: 14px;
     align-items: center;
     color: ${props => props.theme.titleColorLT};
     cursor: pointer;
-
     ${media.portable`
       font-size: 12px;
     `};
-
     :hover {
       font-weight: 500;
     }
-
     span {
       white-space: nowrap;
     }
@@ -156,12 +143,39 @@ const StyledSpinner = styled.div`
 
 class LoadDataModal extends Component {
 
+  _onLoadEditableDataLayer() {
+    const selected = document.getElementById('editable-layer-select').value;
+    this.props.onLoadEditableDataLayer(selected);
+  }
+
+  _onLoadReadOnlyDataLayer() {
+    const selected = document.getElementById('read-only-layer-select').value;
+    this.props.onLoadReadOnlyDataLayer(selected);
+  }
+
   render() {
     const {
       loadingMethod, currentOption, previousMethod,
-      sampleMaps, isMapLoading, onSwitchToLoadingMethod,
+      sampleMaps, isMapLoading,
       error
-    } = this.props;
+    } = this.props.app;
+    let onSwitchToLoadingMethod = this.props.onSwitchToLoadingMethod;
+
+    let customLayers = this.props.keplerGl.map.visState.customLayers;
+    // if customLayers isn't empty
+    let editableOptions = [];
+    let readOnlyOptions = [];
+
+    if(customLayers) {
+      for(let i=0; i<customLayers.length; i++) {
+        let option = <option key={i} value={customLayers[i].id}>{customLayers[i].title}</option>;
+        if(customLayers[i].editable){
+          editableOptions.push(option);
+        }else{
+          readOnlyOptions.push(option);
+        }
+      }
+    }
 
     return (
       <ThemeProvider theme={themeLT}>
@@ -179,22 +193,27 @@ class LoadDataModal extends Component {
                   />
                 ) : null}
                 {loadingMethod.id === 'upload' ? (
-                  <FileUpload {...this.props} />
-                ) : null}
-                {loadingMethod.id === 'remote' ? (
-                  <LoadRemoteMap
-                    onLoadRemoteMap={this.props.onLoadRemoteMap}
-                    option={this.props.currentOption}
-                    error={this.props.error}
-                  />
-                ) : null}
-                {loadingMethod.id === 'sample' ? (
-                  <SampleMapGallery
-                    sampleData={currentOption}
-                    sampleMaps={sampleMaps}
-                    back={() => onSwitchToLoadingMethod(previousMethod.id)}
-                    onLoadSample={this.props.onLoadSample}
-                    error={error} />
+                  <div>
+                    <label> Select Editable layers </label>
+                    <select id="editable-layer-select">
+                      {editableOptions}
+                    </select>
+                    <p></p>
+                    <button
+                      id="editable-layer-load-submit"
+                      onClick={this._onLoadEditableDataLayer.bind(this)}
+                    >Load</button>
+                    <p></p>
+                    <label> Select Read-only layers </label>
+                    <select id="read-only-layer-select">
+                      {readOnlyOptions}
+                    </select>
+                    <p></p>
+                    <button
+                      id="read-only-layer-load-submit"
+                      onClick={this._onLoadReadOnlyDataLayer.bind(this)}
+                    >Load</button>
+                  </div>
                 ) : null}
               </div>)
           }
@@ -222,7 +241,6 @@ const Tabs = ({method, toggleMethod}) => (
           ) : null
       )}
     </div>
-    <TrySampleData onClick={() => toggleMethod(LOADING_METHODS_NAMES.sample)} />
   </ModalTab>
 );
 

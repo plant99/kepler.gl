@@ -21,6 +21,7 @@
 import {push} from 'react-router-redux';
 import {request, text as requestText, json as requestJson} from 'd3-request';
 import {loadFiles, toggleModal} from 'kepler.gl/actions';
+import {parse, stringify} from 'wellknown';
 
 import {
   LOADING_SAMPLE_ERROR_MESSAGE,
@@ -32,6 +33,9 @@ import {getCloudProvider} from './cloud-providers';
 import {generateHashId} from './utils/strings';
 import {parseUri} from './utils/url';
 import KeplerGlSchema from 'kepler.gl/schemas';
+import {processGeojson} from 'kepler.gl/processors';
+import {addDataToMap} from 'kepler.gl/actions';
+import readOnlyConfig from './data/read-only-config';
 
 // CONSTANTS
 export const INIT = 'INIT';
@@ -40,6 +44,12 @@ export const LOAD_REMOTE_RESOURCE_SUCCESS = 'LOAD_REMOTE_RESOURCE_SUCCESS';
 export const LOAD_REMOTE_RESOURCE_ERROR = 'LOAD_REMOTE_RESOURCE_ERROR';
 export const LOAD_MAP_SAMPLE_FILE = 'LOAD_MAP_SAMPLE_FILE';
 export const SET_SAMPLE_LOADING_STATUS = 'SET_SAMPLE_LOADING_STATUS';
+export const SAVE_EDITABLE_TO_REMOTE = 'SAVE_EDITABLE_TO_REMOTE';
+export const FETCH_EDITABLE_SUCCESS = 'FETCH_EDITABLE_SUCCESS';
+export const UPDATE_POLYGON_DETAILS = 'UPDATE_POLYGON_DETAILS';
+export const DELETE_POLYGON = 'DELETE_POLYGON';
+export const SET_EDITABLE_LAYERS = 'SET_EDITABLE_LAYERS';
+export const FETCH_LAYERS_METADATA_SUCCESS = 'FETCH_LAYERS_METADATA_SUCCESS';
 
 // Sharing
 export const PUSHING_FILE = 'PUSHING_FILE';
@@ -85,6 +95,13 @@ export function loadRemoteResourceSuccess(response, config, options) {
     config,
     options
   };
+}
+
+export function setEditableLayers(layerIds) {
+  return {
+    type: SET_EDITABLE_LAYERS,
+    layerIds
+  }
 }
 
 export function loadRemoteResourceError(error, url) {
@@ -182,6 +199,226 @@ function loadRemoteRawData(url) {
       resolve([result.response, url])
     })
   });
+}
+
+export function saveEditableToRemoteAction() {
+  return {
+    type: SAVE_EDITABLE_TO_REMOTE
+  };
+}
+
+export function fetchEditableSuccess(editables, layerId) {
+  return {
+    type: FETCH_EDITABLE_SUCCESS,
+    editables,
+    layerId
+  }
+}
+
+export function fetchLayersMetadataSuccess(metadata) {
+  return {
+    type: FETCH_LAYERS_METADATA_SUCCESS,
+    metadata
+  }
+}
+
+export function updatePolygonDetails(polygonId, title, description, layerId) {
+  return {
+    type: UPDATE_POLYGON_DETAILS,
+    polygonId,
+    title,
+    description,
+    layerId
+  }
+}
+
+export function deletePolygon(polygonId) {
+  return {
+    type: DELETE_POLYGON,
+    polygonId
+  }
+}
+
+async function postData(url = '', data = {}) {
+  // Default options are marked with *
+  const response = await fetch(url, {
+    method: 'POST', // *GET, POST, PUT, DELETE, etc.
+    mode: 'cors', // no-cors, *cors, same-origin
+    cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+    credentials: 'same-origin', // include, *same-origin, omit
+    headers: {
+      'Content-Type': 'application/json'
+      // 'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    redirect: 'follow', // manual, *follow, error
+    referrerPolicy: 'no-referrer', // no-referrer, *client
+    body: JSON.stringify(data) // body data type must match "Content-Type" header
+  });
+  return await response.json(); // parses JSON response into native JavaScript objects
+}
+
+export function saveEditableToRemote() {
+  return (dispatch, getState) => {
+    let features = getState()["demo"]["keplerGl"]["map"]["visState"]["editor"]["features"];
+    let requestPromises = [];
+    // save features
+    for(let i=0; i<features.length; i++) {
+      let promise = null;
+      if(Math.round(features[i].id) === features[i].id) {
+        // update this polygon
+        const url = "http://localhost:8000/polygon/update";
+        let data = {
+          id: features[i].id,
+          title: features[i].properties.custom.title,
+          description: features[i].properties.custom.description,
+          geom: JSON.stringify(features[i].geometry),
+          layer_id: features[i].properties.custom.layer_id
+        }
+        console.log(data);
+        promise = postData(url, data)
+      }else {
+        // create this polygon
+        const url = "http://localhost:8000/polygon/create";
+        let data = {
+          title: features[i].properties.custom.title,
+          description: features[i].properties.custom.description,
+          geojson: JSON.stringify(features[i].geometry),
+          layer_id: features[i].properties.custom.layer_id
+        }
+        promise = postData(url, data)
+      }
+      requestPromises.push(promise);
+    }
+
+    // delete features
+    let deletedIds = getState()["demo"]["keplerGl"]["map"]["visState"]["deletedIds"]
+    if(deletedIds) {
+      for(let i=0; i<deletedIds.length; i++) {
+        const url = `http://localhost:8000/polygon/delete/${deletedIds[i]}`;
+        requestPromises.push(fetch(url));
+      }
+    }
+
+    Promise.all(requestPromises)
+    .then((results) => {
+      dispatch(saveEditableToRemoteAction());
+    })
+    .catch(errors => {
+      console.log(errors);
+    });
+    
+  }
+}
+
+export function loadEditableData() {
+  return (dispatch, getState) => {
+    const url = "http://localhost:8000/polygons/";
+    fetch(url)
+      .then(data => {
+        return data.json();
+      })
+      .then(jsonData =>{
+        let listPoly = jsonData;
+        let features = [];
+        for(let i=0; i<listPoly.length; i++){
+          const feature = {
+            geometry: parse(listPoly[i].geom),
+            type: "Feature",
+            properties: {
+              custom: listPoly[i],
+              renderType: "Polygon",
+            },
+            id: listPoly[i].id,
+          };
+          features.push(feature);
+        }
+        // emit event
+        dispatch(fetchEditableSuccess(features));
+      })
+      .catch(err => {
+        // TODO change status
+        dispatch(loadRemoteResourceError({status: 404, message: "Couldn't save editable polygons"}, url));
+      });
+  }
+}
+
+export function loadLayersMetadata() {
+  return (dispatch, getState) => {
+    const url = "http://localhost:8000/layers";
+    fetch(url)
+      .then(data => {
+        return data.json();
+      })
+      .then(jsonData =>{
+        dispatch(fetchLayersMetadataSuccess(jsonData));
+      })
+      .catch(err => {
+        // TODO change status
+        dispatch(loadRemoteResourceError({status: 404, message: "Couldn't save editable polygons"}, url));
+      });
+  }
+}
+
+
+export function loadEditableDataLayer(layerId) {
+  return (dispatch, getState) => {
+    const url = "http://localhost:8000/pgs_by_layer/?layer_id="+layerId;
+    fetch(url)
+      .then(data => {
+        return data.json();
+      })
+      .then(jsonData =>{
+        let listPoly = jsonData;
+        let features = [];
+        for(let i=0; i<listPoly.length; i++){
+          const feature = {
+            geometry: parse(listPoly[i].geom),
+            type: "Feature",
+            properties: {
+              custom: listPoly[i],
+              renderType: "Polygon",
+            },
+            id: listPoly[i].id,
+            layerId: listPoly[i].layer_id
+          };
+          features.push(feature);
+        }
+        // emit event
+        dispatch(fetchEditableSuccess(features, layerId));
+      })
+      .catch(err => {
+        // TODO change status
+        console.log(err);
+        dispatch(loadRemoteResourceError({status: 404, message: "Couldn't save editable polygons"}, url));
+      });
+  }
+}
+
+
+export function loadReadOnlyDataLayer(layer_id) {
+  return (dispatch) => {
+    // dispatch(loadRemoteResourceSuccess({},{},{dataUrl: 'http://localhost:8000/public/ro.json'}));
+    loadRemoteData('http://localhost:8000/public/ro.json')
+      .then(data => {
+        dispatch(addDataToMap({
+          datasets: {
+            info: {
+              label: 'Custom read only',
+              id: 'custom-read-only'
+            },
+            data: processGeojson(data)
+          },
+          options: {
+            keepExistingConfig: true
+          },
+          config: readOnlyConfig
+        }))
+        // dispatch(loadRemoteResourceSuccess(data, {}, {dataUrl: 'http://localhost:8000/public/ro.json'}));
+      })
+      .catch(error => {
+        console.log("error has occured", error);
+      })
+  }
 }
 
 // The following methods are only used to load SAMPLES

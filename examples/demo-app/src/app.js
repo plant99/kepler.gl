@@ -27,24 +27,30 @@ import {connect} from 'react-redux';
 import {theme} from 'kepler.gl/styles';
 import Banner from './components/banner';
 import Announcement from './components/announcement';
+import EditablePropertiesControl from './components/editablePropertiesControl';
+import EditableLayersControl from './components/editableLayersControl';
+import CreateEditablePropertiesControl from './components/createEditablePropertiesControl';
 import {replaceLoadDataModal} from './factories/load-data-modal';
 import {replaceSaveMap} from './factories/save-map';
 import {replaceMapControl} from './factories/map-control';
 import {replacePanelHeader} from './factories/panel-header';
+import {replaceMapPopover} from './factories/map-popover.js';
 import ExportUrlModal from './components/sharing/export-url-modal';
 import {AUTH_TOKENS} from './constants/default-settings';
 import {
   exportFileToCloud,
   loadRemoteMap,
   loadSampleConfigurations,
-  setCloudLoginSuccess
+  setCloudLoginSuccess,
+  loadEditableData,
+  loadLayersMetadata
 } from './actions';
 
 const KeplerGl = require('kepler.gl/components').injectComponents([
   replaceLoadDataModal(),
   replaceSaveMap(),
   replaceMapControl(),
-  replacePanelHeader()
+  replacePanelHeader(),
 ]);
 
 // Sample data
@@ -124,7 +130,10 @@ class App extends Component {
     //   window.setTimeout(this._showBanner, 3000);
     // }
     // load sample data
-    // this._loadSampleData();
+    this._loadSampleData();
+
+    // load editable data
+    // this._loadEditableData();
 
     // Notifications
     // this._loadMockNotifications();
@@ -166,12 +175,21 @@ class App extends Component {
   }
 
   _loadSampleData() {
-    this._loadPointData();
+    // this._loadPointData();
     // this._loadGeojsonData();
     // this._loadTripGeoJson();
     // this._loadIconData();
     // this._loadH3HexagonData();
     // this._loadScenegraphLayer();
+    this._loadLayersMetadata();
+  }
+
+  _loadEditableData() {
+    this.props.dispatch(loadEditableData());
+  }
+
+  _loadLayersMetadata() {
+    this.props.dispatch(loadLayersMetadata());
   }
 
   _loadPointData() {
@@ -393,6 +411,10 @@ class App extends Component {
               )}
             </AutoSizer>
           </div>
+
+        <EditablePropertiesControl/>
+        <EditableLayersControl/>
+        <CreateEditablePropertiesControl/>
         </GlobalStyle>
       </ThemeProvider>
     );

@@ -77,17 +77,18 @@ export const LOADING_METHODS = [
       }
     ]
   },
-  {
-    id: LOADING_METHODS_NAMES.remote,
-    label: 'Load Map using URL'
-  },
-  {
-    id: LOADING_METHODS_NAMES.sample,
-    label: 'Sample Data',
-    options: [
-      // Dynamically populated
-    ]
-  }
+  // commented to remove remote and sample data loading
+  // {
+  //   id: LOADING_METHODS_NAMES.remote,
+  //   label: 'Load Map using URL'
+  // },
+  // {
+  //   id: LOADING_METHODS_NAMES.sample,
+  //   label: 'Sample Data',
+  //   options: [
+  //     // Dynamically populated
+  //   ]
+  // }
 ];
 
 export const LOADING_SAMPLE_LIST_ERROR_MESSAGE = 'Not able to load sample gallery';

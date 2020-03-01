@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 import React, {useState} from 'react';
+import {connect} from 'react-redux';
 import styled from 'styled-components';
 import {
   MapControlFactory,
@@ -26,7 +27,14 @@ import {
   IconRoundSmall,
   MapControlButton
 } from 'kepler.gl/components';
+
 import ReactMarkdown from 'react-markdown';
+
+
+import {
+ saveEditableToRemote,
+ toggleDeleteMode
+} from '../../actions';
 
 const MapControl = MapControlFactory();
 
@@ -183,8 +191,35 @@ function SampleMapPanel(props) {
 const CustomMapControl = props => (
   <StyledMapControlOverlay>
     {!props.isExport && props.currentSample ? <SampleMapPanel {...props} /> : null}
-    <MapControl {...props} />
+    {/* to save editable components */}
+    <StyledFloatingPanel>
+      {/*<MapControlButton    
+        onClick={() => {console.log(props.editor.deleteMode); props.dispatch(toggleDeleteMode());}}
+
+        style={{
+          color: (props.editor.deleteMode) ? '#42f59e' : '#f5a742',
+          backgroundColor: 'grey',
+        }}
+      >
+        Delete
+      </MapControlButton>*/}
+    </StyledFloatingPanel>
+    <StyledFloatingPanel>
+      <MapControlButton    
+        onClick={() => {props.dispatch(saveEditableToRemote())}}
+      >
+        Save
+      </MapControlButton>
+    </StyledFloatingPanel>
+    <MapControl {...props} /> 
   </StyledMapControlOverlay>
 );
+const mapStateToProps = state => state.demo.keplerGl.map.visState;
+const dispatchToProps = dispatch => ({dispatch});
 
-export default CustomMapControl;
+export default connect(
+  mapStateToProps,
+  dispatchToProps
+)(CustomMapControl);
+
+// export default CustomMapControl;

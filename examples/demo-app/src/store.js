@@ -25,6 +25,11 @@ import {enhanceReduxMiddleware} from 'kepler.gl/middleware';
 import thunk from 'redux-thunk';
 // eslint-disable-next-line no-unused-vars
 import window from 'global/window';
+import {createLogger} from 'redux-logger'
+
+const logger = createLogger({
+  diff: true
+})
 
 import demoReducer from './reducers/index';
 
@@ -35,7 +40,8 @@ const reducers = combineReducers({
 
 export const middlewares = enhanceReduxMiddleware([
   thunk,
-  routerMiddleware(browserHistory)
+  routerMiddleware(browserHistory),
+  // logger,
 ]);
 
 export const enhancers = [applyMiddleware(...middlewares)];
