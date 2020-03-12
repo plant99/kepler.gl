@@ -19,7 +19,6 @@
     -   [requestMapStyles][28]
     -   [set3dBuildingColor][30]
 -   [main][32]
-    -   [addDataToMap][33]
     -   [keplerGlInit][36]
     -   [receiveMapConfig][38]
     -   [resetMapConfig][41]
@@ -418,7 +417,7 @@ this.props.dispatch(
       },
       data: sampleTripData
     },
-    option: {
+    options: {
       centerMap: true,
       readOnly: false,
       keepExistingConfig: false
